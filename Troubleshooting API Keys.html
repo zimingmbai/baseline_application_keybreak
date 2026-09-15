@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Troubleshooting an API Key — MGMT 6110</title>
+<style>
+  :root{
+    --paper:#EEEDE7;
+    --paper-edge:#DFDDD3;
+    --ink:#1C1B19;
+    --ink-muted:#6B6A63;
+    --console-bg:#20242B;
+    --console-text:#D8DEE4;
+    --console-muted:#8B94A0;
+    --accent:#2F6F63;
+    --accent-weak:#DCE7E4;
+    --danger:#B4483A;
+    --success:#3F8F5F;
+    --serif: Georgia, 'Iowan Old Style', 'Palatino Linotype', 'Book Antiqua', serif;
+    --sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    --mono: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+  }
+  *{box-sizing:border-box;}
+  html,body{height:100%;}
+  body{
+    margin:0;
+    background:var(--paper);
+    color:var(--ink);
+    font-family:var(--sans);
+    font-size:17px;
+    line-height:1.55;
+    -webkit-font-smoothing:antialiased;
+  }
+  a{color:var(--accent);}
+  .app{
+    display:flex;
+    flex-direction:column;
+    height:100vh;
+    height:100dvh;
+    overflow:hidden;
+  }
+
+  /* progress row */
+  .progress-row{
+    flex:0 0 auto;
+    padding:14px 20px 8px;
+  }
+  .progress-track{
+    height:4px;
+    background:var(--paper-edge);
+    border-radius:2px;
+    overflow:hidden;
+  }
+  .progress-fill{
+    height:100%;
+    width:0%;
+    background:var(--accent);
+    transition:width .35s ease;
+  }
+  .progress-label{
+    display:flex;
+    justify-content:flex-end;
+    margin-top:6px;
+    font-size:.8rem;
+    color:var(--ink-muted);
+    font-variant-numeric:tabular-nums;
+  }
+
+  /* slides */
+  .viewport{
+    flex:1 1 auto;
+    overflow:hidden;
+    position:relative;
+  }
+  .track{
+    display:flex;
+    height:100%;
+    transition:transform .4s cubic-bezier(.4,0,.2,1);
+    will-change:transform;
+  }
+  .slide{
+    flex:0 0 100%;
+    height:100%;
+    overflow-y:auto;
+    padding:8px 22px 28px;
+  }
+  .slide-inner{
+    max-width:640px;
+  }
+  .eyebrow{
+    font-family:var(--sans);
+    font-size:.85rem;
+    color:var(--ink-muted);
+    margin:0 0 6px;
+  }
+  h1.slide-title{
+    font-family:var(--serif);
+    font-weight:600;
+    font-size:clamp(1.75rem,7vw,2.3rem);
+    line-height:1.2;
+    margin:0 0 16px;
+  }
+  h1.title-hero{
+    font-size:clamp(2rem,9vw,2.7rem);
+  }
+  .slide.divider{
+    background:var(--accent);
+  }
+  .slide.divider .slide-inner{
+    height:100%;
+    display:flex;
+    flex-direction:column;
+    justify-content:center;
+  }
+  .slide.divider .eyebrow{color:rgba(255,255,255,.75);}
+  .slide.divider h1.slide-title{color:#fff;}
+  .slide.divider p{color:rgba(255,255,255,.92);}
+  .slide p{
+    margin:0 0 14px;
+    max-width:60ch;
+  }
+  .slide p.caption{
+    font-size:.92rem;
+    color:var(--ink-muted);
+    margin-top:-4px;
+  }
+
+  .console{
+    background:var(--console-bg);
+    color:var(--console-text);
+    font-family:var(--mono);
+    font-size:.9rem;
+    line-height:1.65;
+    padding:16px;
+    border-radius:8px;
+    white-space:pre-wrap;
+    word-break:break-word;
+    margin:16px 0;
+  }
+  .console .file-label{
+    display:block;
+    color:var(--console-muted);
+    font-size:.75rem;
+    letter-spacing:.02em;
+    margin-bottom:8px;
+  }
+
+  .status{
+    display:inline-block;
+    margin-top:12px;
+    padding:6px 12px;
+    border-radius:5px;
+    font-family:var(--mono);
+    font-weight:600;
+    font-size:.88rem;
+    color:#fff;
+  }
+  .status.err{background:var(--danger);}
+  .status.ok{background:var(--success);}
+
+  .note{
+    border-left:3px solid var(--accent);
+    background:var(--accent-weak);
+    padding:12px 14px;
+    border-radius:4px;
+    font-size:.94rem;
+    margin:16px 0;
+  }
+  .note strong{display:block; margin-bottom:4px;}
+
+  ul.recap{
+    margin:0 0 16px;
+    padding-left:20px;
+  }
+  ul.recap li{
+    margin-bottom:10px;
+    max-width:56ch;
+  }
+
+  .btn-row{
+    display:flex;
+    flex-wrap:wrap;
+    gap:10px;
+    margin-top:6px;
+  }
+  .btn-outline{
+    display:inline-block;
+    padding:10px 16px;
+    border-radius:6px;
+    border:1.5px solid var(--ink);
+    color:var(--ink);
+    text-decoration:none;
+    font-size:.92rem;
+    background:transparent;
+  }
+  .btn-outline:hover{background:var(--ink); color:var(--paper);}
+
+  /* bottom nav */
+  .nav{
+    flex:0 0 auto;
+    border-top:1px solid var(--paper-edge);
+    background:var(--paper);
+    padding:10px 18px calc(14px + env(safe-area-inset-bottom));
+    display:flex;
+    flex-direction:column;
+    gap:10px;
+  }
+  .dots-row{
+    display:flex;
+    justify-content:center;
+    gap:6px;
+  }
+  .dot{
+    width:8px;
+    height:8px;
+    padding:0;
+    border:none;
+    border-radius:50%;
+    background:var(--paper-edge);
+    cursor:pointer;
+  }
+  .dot.active{
+    width:20px;
+    border-radius:4px;
+    background:var(--accent);
+    transition:width .25s ease, background .25s ease;
+  }
+  .buttons-row{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    gap:12px;
+  }
+  .nav-btn{
+    flex:0 0 auto;
+    padding:11px 20px;
+    border-radius:6px;
+    font-size:.95rem;
+    font-family:var(--sans);
+    cursor:pointer;
+    min-width:88px;
+  }
+  .nav-btn:disabled{opacity:0; pointer-events:none;}
+  #backBtn{
+    background:transparent;
+    border:1.5px solid var(--paper-edge);
+    color:var(--ink);
+  }
+  #nextBtn{
+    background:var(--accent);
+    border:1.5px solid var(--accent);
+    color:#fff;
+    margin-left:auto;
+  }
+
+  *:focus-visible{
+    outline:2px solid var(--accent);
+    outline-offset:2px;
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    .track{transition:none !important;}
+    .dot{transition:none !important;}
+  }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <div class="progress-row">
+    <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+    <div class="progress-label"><span id="counter">1 / 10</span></div>
+  </div>
+
+  <div class="viewport" id="viewport">
+    <div class="track" id="track">
+
+      <!-- 1: Title -->
+      <section class="slide">
+        <div class="slide-inner">
+          <p class="eyebrow">MGMT 6110: Human-AI Collaboration</p>
+          <h1 class="slide-title title-hero">Troubleshooting an API Key</h1>
+          <p>This app looks broken right now. We're going to find out why, fix it live, and then look at a quieter mistake that can hide in a project's Git configuration.</p>
+          <p class="caption">Swipe left or tap Next to begin.</p>
+          <div class="btn-row">
+            <a class="btn-outline" href="https://baselineapp-keybreak.vercel.app/" target="_blank" rel="noopener noreferrer">Open the live app</a>
+            <a class="btn-outline" href="https://github.com/zimingmbai/mgmt6110_group2_baseline_application/tree/main" target="_blank" rel="noopener noreferrer">Open the GitHub repo</a>
+          </div>
+        </div>
+      </section>
+
+      <!-- 2: App is broken -->
+      <section class="slide">
+        <div class="slide-inner">
+          <h1 class="slide-title">The app doesn't work</h1>
+          <p>Open the live app on your own phone and try it. Right now, something in its connection to real-world data has failed — that's the bug we're chasing today.</p>
+          <div class="btn-row">
+            <a class="btn-outline" href="https://baselineapp-keybreak.vercel.app/" target="_blank" rel="noopener noreferrer">Open the live app</a>
+          </div>
+        </div>
+      </section>
+
+      <!-- 3: /api/health false -->
+      <section class="slide">
+        <div class="slide-inner">
+          <h1 class="slide-title">Ask the app what's wrong</h1>
+          <p>Well-built apps can report their own configuration. This one exposes a small diagnostic page at <code>/api/health</code>.</p>
+          <div class="console">
+<span class="file-label">/api/health</span>{
+  "keyConfigured": false
+}</div>
+          <p class="caption"><code>keyConfigured: false</code> tells us exactly where to look — the API key, not the app's code.</p>
+          <div class="btn-row">
+            <a class="btn-outline" href="https://baselineapp-keybreak.vercel.app/api/health" target="_blank" rel="noopener noreferrer">Open /api/health</a>
+          </div>
+        </div>
+      </section>
+
+      <!-- 4: CMD wrong key -> 401 -->
+      <section class="slide">
+        <div class="slide-inner">
+          <h1 class="slide-title">Test the key by itself</h1>
+          <p>Before touching any code, we can test the same credentials directly from a Windows command prompt.</p>
+          <div class="console">set LTA_ACCOUNT_KEY=your_key
+curl.exe -4 -is -H "AccountKey: %LTA_ACCOUNT_KEY%" ^
+  "https://datamall2.mytransport.sg/ltaodataservice/CarParkAvailabilityv2"</div>
+          <span class="status err">HTTP/1.1 401 Unauthorized</span>
+          <p class="caption" style="margin-top:12px;">401 means the server understood the request but rejected these exact credentials. The key itself is wrong.</p>
+        </div>
+      </section>
+
+      <!-- 5: wrong endpoint -> 404 -->
+      <section class="slide">
+        <div class="slide-inner">
+          <h1 class="slide-title">Test the address by itself</h1>
+          <p>Now the key is right, but the endpoint is mistyped.</p>
+          <div class="console">curl.exe -4 -is -H "AccountKey: %LTA_ACCOUNT_KEY%" ^
+  "https://datamall2.mytransport.sg/ltaodataservice/CarParkAvailability"</div>
+          <span class="status err">HTTP/1.1 404 Not Found</span>
+          <p class="caption" style="margin-top:12px;">Notice the missing <code>v2</code>. 404 means there's nothing to talk to at that address at all — a typo, not a credentials problem.</p>
+        </div>
+      </section>
+
+      <!-- 6: correct key + endpoint -> 200 -->
+      <section class="slide">
+        <div class="slide-inner">
+          <h1 class="slide-title">Get both right</h1>
+          <p>With the real key and the correct endpoint, the same kind of request succeeds.</p>
+          <div class="console">curl.exe -4 -is -H "AccountKey: %LTA_ACCOUNT_KEY%" ^
+  "https://datamall2.mytransport.sg/ltaodataservice/CarParkAvailabilityv2"</div>
+          <span class="status ok">HTTP/1.1 200 OK</span>
+          <p class="caption" style="margin-top:12px;">200 confirms both pieces are correct: valid key, valid address.</p>
+        </div>
+      </section>
+
+      <!-- 7: /api/health true -->
+      <section class="slide">
+        <div class="slide-inner">
+          <h1 class="slide-title">Confirm the fix</h1>
+          <p>Once the correct key is saved as an environment variable in Vercel and the app is redeployed, the diagnostic changes too.</p>
+          <div class="console">
+<span class="file-label">/api/health</span>{
+  "keyConfigured": true
+}</div>
+          <p class="caption">Same endpoint, same app — just a different key behind it.</p>
+          <div class="btn-row">
+            <a class="btn-outline" href="https://baselineapp-keybreak.vercel.app/api/health" target="_blank" rel="noopener noreferrer">Open /api/health</a>
+          </div>
+        </div>
+      </section>
+
+      <!-- 8: Section divider -->
+      <section class="slide divider">
+        <div class="slide-inner">
+          <p class="eyebrow">Part 2 of 2</p>
+          <h1 class="slide-title">A quieter kind of risk</h1>
+          <p>The app is fixed. Now let's look at something in the project's files that has nothing to do with curl or Vercel — how API keys are meant to be stored, and a small gap in how Git protects them.</p>
+        </div>
+      </section>
+
+      <!-- 9: .env.example -->
+      <section class="slide">
+        <div class="slide-inner">
+          <h1 class="slide-title">Where the key is supposed to live</h1>
+          <p>The project ships with a file called <code>.env.example</code>. It's a template, not a hiding place — it lists which key the app needs, without containing a real one.</p>
+          <div class="console">
+<span class="file-label">.env.example</span>LTA_ACCOUNT_KEY=your_key_here</div>
+          <p>When you actually configure the app — in Google AI Studio, in Vercel, or on your own laptop — you're meant to create a separate file, usually named <code>.env</code>, and put your real key there instead. That real <code>.env</code> file is the one meant to stay private.</p>
+          <div class="btn-row">
+            <a class="btn-outline" href="https://github.com/zimingmbai/mgmt6110_group2_baseline_application/blob/main/.env.example" target="_blank" rel="noopener noreferrer">View .env.example on GitHub</a>
+          </div>
+        </div>
+      </section>
+
+      <!-- 10: .gitignore gotcha -->
+      <section class="slide">
+        <div class="slide-inner">
+          <h1 class="slide-title">The safety net has a gap</h1>
+          <p>Git decides what gets uploaded to GitHub using a file called <code>.gitignore</code>. Normally, it hides every <code>.env</code> file, since those can hold real secrets.</p>
+          <div class="console">
+<span class="file-label">.gitignore</span>.env*
+!.env.example</div>
+          <p>The line <code>!.env.example</code> is an exception — the <code>!</code> means "don't hide this one." That's normally fine, since <code>.env.example</code> is only a template.</p>
+          <p>The risk is if a real key ever gets typed directly into <code>.env.example</code> instead of a proper <code>.env</code> file. Git was never hiding that file, so the real key would be pushed to GitHub and become public.</p>
+          <div class="note">
+            <strong>Rule of thumb</strong>
+            Real keys go in <code>.env</code>. Placeholders go in <code>.env.example</code>. Keep the two separate.
+          </div>
+          <div class="btn-row">
+            <a class="btn-outline" href="https://github.com/zimingmbai/mgmt6110_group2_baseline_application/blob/main/.gitignore" target="_blank" rel="noopener noreferrer">View .gitignore on GitHub</a>
+          </div>
+        </div>
+      </section>
+
+      <!-- 11: Recap -->
+      <section class="slide">
+        <div class="slide-inner">
+          <h1 class="slide-title">What today's fix teaches</h1>
+          <ul class="recap">
+            <li>Check a health or status endpoint before touching code.</li>
+            <li>Test raw credentials with curl before blaming your own app.</li>
+            <li>401 is a bad key. 404 is a bad address. 200 means both are correct.</li>
+            <li>Real secrets belong in <code>.env</code>, never in <code>.env.example</code>.</li>
+            <li>A leading <code>!</code> in <code>.gitignore</code> means "don't ignore this" — read it carefully.</li>
+          </ul>
+          <p>Questions?</p>
+          <div class="btn-row">
+            <a class="btn-outline" href="https://baselineapp-keybreak.vercel.app/" target="_blank" rel="noopener noreferrer">Open the live app</a>
+            <a class="btn-outline" href="https://github.com/zimingmbai/mgmt6110_group2_baseline_application/tree/main" target="_blank" rel="noopener noreferrer">Open the GitHub repo</a>
+          </div>
+        </div>
+      </section>
+
+    </div>
+  </div>
+
+  <div class="nav">
+    <div class="dots-row" id="dots"></div>
+    <div class="buttons-row">
+      <button class="nav-btn" id="backBtn">Back</button>
+      <button class="nav-btn" id="nextBtn">Next</button>
+    </div>
+  </div>
+
+</div>
+
+<script>
+(function(){
+  var slides = document.querySelectorAll('.slide');
+  var total = slides.length;
+  var track = document.getElementById('track');
+  var viewport = document.getElementById('viewport');
+  var dotsWrap = document.getElementById('dots');
+  var counterEl = document.getElementById('counter');
+  var progressFill = document.getElementById('progressFill');
+  var backBtn = document.getElementById('backBtn');
+  var nextBtn = document.getElementById('nextBtn');
+  var index = 0;
+
+  slides.forEach(function(_, i){
+    var d = document.createElement('button');
+    d.className = 'dot';
+    d.setAttribute('aria-label', 'Go to screen ' + (i + 1));
+    d.addEventListener('click', function(){ goTo(i); });
+    dotsWrap.appendChild(d);
+  });
+  var dots = dotsWrap.querySelectorAll('.dot');
+
+  function update(){
+    track.style.transform = 'translateX(-' + (index * 100) + '%)';
+    counterEl.textContent = (index + 1) + ' / ' + total;
+    progressFill.style.width = (index / (total - 1)) * 100 + '%';
+    dots.forEach(function(d, i){ d.classList.toggle('active', i === index); });
+    backBtn.disabled = (index === 0);
+    nextBtn.textContent = (index === total - 1) ? 'Restart' : 'Next';
+  }
+
+  function goTo(i){
+    index = Math.max(0, Math.min(total - 1, i));
+    update();
+  }
+  function next(){ index === total - 1 ? goTo(0) : goTo(index + 1); }
+  function prev(){ goTo(index - 1); }
+
+  backBtn.addEventListener('click', prev);
+  nextBtn.addEventListener('click', next);
+
+  document.addEventListener('keydown', function(e){
+    if(e.key === 'ArrowRight' || e.key === ' '){ e.preventDefault(); next(); }
+    else if(e.key === 'ArrowLeft'){ prev(); }
+  });
+
+  var touchStartX = null;
+  viewport.addEventListener('touchstart', function(e){
+    touchStartX = e.touches[0].clientX;
+  }, {passive:true});
+  viewport.addEventListener('touchend', function(e){
+    if(touchStartX === null) return;
+    var dx = e.changedTouches[0].clientX - touchStartX;
+    if(Math.abs(dx) > 40){ dx < 0 ? next() : prev(); }
+    touchStartX = null;
+  }, {passive:true});
+
+  if(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches){
+    track.style.transition = 'none';
+  }
+
+  update();
+})();
+</script>
+</body>
+</html>
