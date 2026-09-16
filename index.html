@@ -166,6 +166,29 @@
     letter-spacing:.02em;
     margin-bottom:8px;
   }
+  .console-mac{display:none;}
+  body.os-mac .console-win{display:none;}
+  body.os-mac .console-mac{display:block;}
+  .os-toggle{
+    display:inline-flex;
+    border:1.5px solid var(--paper-edge);
+    border-radius:6px;
+    overflow:hidden;
+    margin:16px 0 0;
+  }
+  .os-tab{
+    padding:7px 14px;
+    font-size:.85rem;
+    font-family:var(--sans);
+    background:transparent;
+    border:none;
+    cursor:pointer;
+    color:var(--ink-muted);
+  }
+  .os-tab.active{
+    background:var(--ink);
+    color:var(--paper);
+  }
 
   .status{
     display:inline-block;
@@ -351,9 +374,16 @@
       <section class="slide">
         <div class="slide-inner">
           <h1 class="slide-title">Test the key by itself</h1>
-          <p>Before touching any code, we can test the same credentials directly from a Windows command prompt.</p>
-          <div class="console">set LTA_ACCOUNT_KEY=your_key
+          <p>Before touching any code, we can test the same credentials directly from a terminal.</p>
+          <div class="os-toggle">
+            <button class="os-tab active" data-os="win">Windows</button>
+            <button class="os-tab" data-os="mac">macOS</button>
+          </div>
+          <div class="console console-win">set LTA_ACCOUNT_KEY=your_key
 curl.exe -4 -is -H "AccountKey: %LTA_ACCOUNT_KEY%" ^
+  "https://datamall2.mytransport.sg/ltaodataservice/CarParkAvailabilityv2"</div>
+          <div class="console console-mac">export LTA_ACCOUNT_KEY=your_key
+curl -4 -is -H "AccountKey: $LTA_ACCOUNT_KEY" \
   "https://datamall2.mytransport.sg/ltaodataservice/CarParkAvailabilityv2"</div>
           <span class="status err">HTTP/1.1 401 Unauthorized</span>
           <p class="caption" style="margin-top:12px;">401 means the server understood the request but rejected these exact credentials. The key itself is wrong.</p>
@@ -365,7 +395,13 @@ curl.exe -4 -is -H "AccountKey: %LTA_ACCOUNT_KEY%" ^
         <div class="slide-inner">
           <h1 class="slide-title">Test the address by itself</h1>
           <p>Now the key is right, but the endpoint is mistyped.</p>
-          <div class="console">curl.exe -4 -is -H "AccountKey: %LTA_ACCOUNT_KEY%" ^
+          <div class="os-toggle">
+            <button class="os-tab active" data-os="win">Windows</button>
+            <button class="os-tab" data-os="mac">macOS</button>
+          </div>
+          <div class="console console-win">curl.exe -4 -is -H "AccountKey: %LTA_ACCOUNT_KEY%" ^
+  "https://datamall2.mytransport.sg/ltaodataservice/CarParkAvailability"</div>
+          <div class="console console-mac">curl -4 -is -H "AccountKey: $LTA_ACCOUNT_KEY" \
   "https://datamall2.mytransport.sg/ltaodataservice/CarParkAvailability"</div>
           <span class="status err">HTTP/1.1 404 Not Found</span>
           <p class="caption" style="margin-top:12px;">Notice the missing <code>v2</code>. 404 means there's nothing to talk to at that address at all — a typo, not a credentials problem.</p>
@@ -377,7 +413,13 @@ curl.exe -4 -is -H "AccountKey: %LTA_ACCOUNT_KEY%" ^
         <div class="slide-inner">
           <h1 class="slide-title">Get both right</h1>
           <p>With the real key and the correct endpoint, the same kind of request succeeds.</p>
-          <div class="console">curl.exe -4 -is -H "AccountKey: %LTA_ACCOUNT_KEY%" ^
+          <div class="os-toggle">
+            <button class="os-tab active" data-os="win">Windows</button>
+            <button class="os-tab" data-os="mac">macOS</button>
+          </div>
+          <div class="console console-win">curl.exe -4 -is -H "AccountKey: %LTA_ACCOUNT_KEY%" ^
+  "https://datamall2.mytransport.sg/ltaodataservice/CarParkAvailabilityv2"</div>
+          <div class="console console-mac">curl -4 -is -H "AccountKey: $LTA_ACCOUNT_KEY" \
   "https://datamall2.mytransport.sg/ltaodataservice/CarParkAvailabilityv2"</div>
           <span class="status ok">HTTP/1.1 200 OK</span>
           <p class="caption" style="margin-top:12px;">200 confirms both pieces are correct: valid key, valid address.</p>
@@ -535,6 +577,17 @@ curl.exe -4 -is -H "AccountKey: %LTA_ACCOUNT_KEY%" ^
   if(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches){
     track.style.transition = 'none';
   }
+
+  var osTabs = document.querySelectorAll('.os-tab');
+  function setOS(os){
+    document.body.classList.toggle('os-mac', os === 'mac');
+    osTabs.forEach(function(btn){
+      btn.classList.toggle('active', btn.dataset.os === os);
+    });
+  }
+  osTabs.forEach(function(btn){
+    btn.addEventListener('click', function(){ setOS(btn.dataset.os); });
+  });
 
   update();
 })();
